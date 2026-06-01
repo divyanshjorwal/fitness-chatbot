@@ -1,8 +1,10 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, session
+import os, secrets
 from groq import Groq
 import os
 
-app = Flask(__name__)
+app = Flask(__name__) 
+app.secret_key = secrets.token_hex(16)
 
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
@@ -12,7 +14,7 @@ system_prompt = """You are a fitness assistant. Format every response like this:
 - Add a blank line between each section
 - Keep each point concise: Exercise name — what it works — sets x reps
 - Never use ** or any markdown symbols
-- End with a short TIP section"""
+- End with a short TIP section , keep your answer short and precise unless asked for detailed answer """
 
 messages = [
     {"role": "system", "content": system_prompt}
@@ -342,22 +344,27 @@ def index():
 
 @app.route("/chat", methods=["POST"])
 def chat():
+    if "messages" not in session:
+        session["messages"] = [{"role": "system", "content": system_prompt}]
+    
     data = request.json
     user_message = data.get("message")
-    messages.append({"role": "user", "content": user_message})
+    session["messages"].append({"role": "user", "content": user_message})
+    
     completion = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=messages
+        messages=session["messages"]
     )
+    
     reply = completion.choices[0].message.content
-    messages.append({"role": "assistant", "content": reply})
+    session["messages"].append({"role": "assistant", "content": reply})
+    session.modified = True
+    
     return jsonify({"response": reply})
-
 
 @app.route("/reset", methods=["POST"])
 def reset():
-    global messages
-    messages = [{"role": "system", "content": system_prompt}]
+    session.clear()
     return jsonify({"status": "ok"})
 
 
