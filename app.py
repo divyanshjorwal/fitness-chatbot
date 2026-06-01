@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY", "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"))
+client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
 system_prompt = """You are a fitness assistant. Format every response like this:
 - Use clear section headings in CAPS (e.g. UPPER BODY, LOWER BODY)
